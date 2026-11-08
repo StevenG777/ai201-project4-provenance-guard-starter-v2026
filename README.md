@@ -39,6 +39,18 @@
 <!-- The path a submission takes, from arriving to the label a reader sees.
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
+Provenance Guard is a small backend a writing site could plug into. A piece of text goes in; a guess, a score, a plain-English label and a way to appeal come out. More detail in [DESIGN.md](DESIGN.md).
+
+1. **Request arrives.** `POST /submit` with `text` and `creator_id`. `app.py` validates it (missing, empty, too short, too long, not JSON) and creates a `content_id`.
+2. **Signal one.** `detector.model_signal` scores how predictable the text is to a local gpt2 model → `model_score`.
+3. **Signal two.** `stylometry.style_signal` scores the shape of the text → `style_score`.
+4. **Combine.** `scoring.combine_signals` merges them into one `confidence` number (higher = more likely AI).
+5. **Label.** `scoring.score_to_label` maps the number to one of three labels using the thresholds in `config.py`.
+6. **Log.** `audit.log_decision` records the decision, both signal scores and status `classified`.
+7. **Respond.** JSON with `content_id`, `guess`, `confidence`, `label`, `model_score`, `style_score`.
+
+A writer who disagrees calls `POST /appeal` with the `content_id` and their reasoning. The item moves to `under_review` and the appeal is logged.
+
 
 
 ---
@@ -53,28 +65,28 @@
 
 ### Signal one — the model signal
 
-**What it measures:**
+**What it measures:** the perplexity of the raw text under a local language model (gpt2, in `detector.py`) — how surprised the model is by each next word. Low perplexity means predictable text. It is squashed onto 0–1, higher = more likely AI.
 
-**Why that might differ between human and AI writing:**
+**Why that might differ between human and AI writing:** AI text is produced by picking likely next words, so a language model finds it easy to predict. Human writing has odd word choices, slang, errors and specifics, so it surprises the model more.
 
-**What it can't see:**
+**What it can't see:** authorship. It only sees predictability, so plain writing in common words and short sentences (younger writers, second-language writers, anyone writing simply) looks machine-like. Measured: a plain human paragraph about a hometown had perplexity 9.4 and `model_score` 0.92, higher than a stiff AI-style paragraph at 0.79. Ornate human prose with rare words can look human, and ornate AI text can slip through.
 
 ### Signal two — the style signal
 
-**What it measures:**
+**What it measures:** the shape of the text, without understanding it (in `stylometry.py`): `sentence_length_spread` (do sentence lengths vary?), `type_token_ratio` (how much vocabulary repeats?) and `punctuation_density` (how much punctuation, weighting semicolons and dashes over full stops). Each is scaled and combined into one 0–1 score, higher = more likely AI.
 
-**Why that might differ between human and AI writing:**
+**Why that might differ between human and AI writing:** AI prose tends toward even, mid-length sentences and a narrower vocabulary. Human writing is lumpier: a three-word sentence next to a forty-word one. Dashes and semicolons are only a weak hint, since humans use them too.
 
-**What it can't see:**
+**What it can't see:** meaning. Typos, broken-up sentences or a pasted quotation change the shape without changing who wrote the text. It also only matches `[a-z0-9']+`, so non-Latin text (Chinese, Russian) yields no words and its output is unreliable. Plain human writing with short, even sentences can also look AI-ish to it.
 
 ### The combining rule
 
 <!-- Write the rule in words, then give the numbers. What happens when the two
      signals disagree? -->
 
-**The rule:**
+**The rule:** DRAFT, to be confirmed in Milestone 4 once signal two exists. A weighted average of the two scores, where two methods disagreeing lands in the middle ("unsure") rather than one overruling the other. The false-positive trace shows both signals are weak on plain human writing, so the AI label should be hard to reach: the AI threshold sits high.
 
-**The numbers:**
+**The numbers:** starting point from `config.py`: weights 0.5 (model) / 0.5 (style); thresholds human ≤ 0.35, AI ≥ 0.65. TODO: update after the four calibration inputs, and note any change to the model-signal midpoint (45.0).
 
 **Where it lives:** `scoring.py::combine_signals`
 
@@ -82,6 +94,8 @@
      somewhere else, say where. -->
 
 **A case where my two signals split, and what my rule does with it:**
+
+TODO (Milestone 4): needs real signal-two scores. Expected candidate: a plain, even-sentenced human paragraph, where signal one says strongly AI (0.92 measured) while signal two may say otherwise.
 
 
 
