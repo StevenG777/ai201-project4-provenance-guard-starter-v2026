@@ -42,63 +42,89 @@ Two things worth knowing before you pick numbers:
   a **miss**.
 
 ---
-## 1.
+## 1. False positives: plain human writing is rarely called AI
 
-<!-- Your criterion. It must name a number. -->
-
-
+Of 10 pieces I wrote myself, each simple and short-sentenced, at most 2 get the
+high-confidence AI label (`guess == "ai"`). The same 10 pieces are used in every
+trial, and the limit has to hold in all three trials.
 
 **Why this target:**
 
-
+On a writing site, wrongly accusing a real writer costs more than missing some AI
+text. Plain, short-sentence writing is the case the model signal is most likely to
+get wrong. I allow 2 of 10 rather than 1 because the model can simply mispredict a
+piece, and 1 in 10 would be too strict to hold reliably across three trials.
 
 ---
 
-## 2.
+---
 
-<!-- Your criterion. -->
+## 2. Score spread: clearly-AI text scores above clearly-human text
 
-
+I choose 10 clearly-AI pieces and 10 clearly-human pieces by hand, and use the same
+20 in every trial. On the combined `confidence` score, every AI piece scores above
+every human piece: the lowest AI score is higher than the highest human score.
 
 **Why this target:**
 
-
+I chose 10 of each because with 2 or 3 pieces a good result could be luck, and 10
+shows the separation holds. I chose "every" over an average because an average can
+hide one badly wrong piece, and I would rather fail on a single outlier and look at it.
 
 ---
 
-## 3.
+---
 
-<!-- Your criterion. -->
+## 3. Label coverage: all three labels are reachable
 
-
+I choose 20 inputs and use the same 20 in every trial. Counting the labels the
+service actually returns (not the ones I expected), each of the three labels
+(high-confidence human, unsure, high-confidence AI) appears at least 5 times out of 20.
 
 **Why this target:**
 
-
+I chose 20 inputs because 10 is too few to see three labels spread out. I chose at
+least 5 per label rather than 3 because 3 per label only accounts for 9 of the 20
+inputs and would let a label be nearly unreachable and still pass.
 
 ---
 
-## 4.
+---
 
-<!-- Your criterion. -->
+## 4. Appeal path: an appeal always changes status and is always recorded
 
-
+In 2 of 2 test appeals, the service does the right thing. Appeal 1 is a valid
+`content_id` with reasoning: the response confirms, the item's status becomes
+`under_review`, and the appeal appears in the log. Appeal 2 is an unknown
+`content_id`: the service returns a clear error and does not create a log entry
+for a nonexistent item.
 
 **Why this target:**
 
-
+The appeal logic is deterministic, so it either works or it doesn't, and there is no
+random chance to allow for. Two cases are enough: if both are right or both are wrong
+it points to a logic error, and if only one is right it shows an edge case I missed.
+It has to be 2 of 2 because this is the only thing standing between a wrong
+accusation and nothing at all.
 
 ---
 
-## 5.
+---
 
-<!-- Your criterion. -->
+## 5. Bad input: missing or empty text is rejected, not labelled
 
-
+When `text` is missing, empty, or only whitespace, `POST /submit` returns an error
+response (HTTP 400 with an `error` field) in all 3 of those cases. It never returns a
+label, and it never crashes with a 500.
 
 **Why this target:**
 
+Empty text was written by neither a person nor an AI, so it fits none of the three
+labels, and any label or score returned for it would be made up. Rejecting it with a
+clear error is the only honest answer. It has to be all 3 of 3 because a crash on
+malformed input is one of the most common real failures.
 
+---
 
 ---
 
