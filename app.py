@@ -199,17 +199,85 @@ def submit():
     what should this do when `text` is missing, empty, or enormous? A crash on
     a malformed input is one of the most common real failures there is.
     """
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _reject(
+            "unknown", "invalid_json",
+            "The request body must be a JSON object.", 400
+        )
 
-    # TODO: delete this and build the route.
+    text = payload.get("text")
+    creator_id = payload.get("creator_id")
+    creator_label = creator_id if isinstance(creator_id, str) else "unknown"
+    if not isinstance(text, str):
+        return _reject(
+            creator_label, "invalid_text",
+            "The text content must be a str object.", 400
+        )
+    if not text.strip():
+        return _reject(
+            creator_label, "missing_text",
+            "Send some text to check in the 'text' field.", 400
+        ) 
+    if not isinstance(creator_id, str):
+        return _reject(
+            creator_label, "invalid creator_id",
+            "The creator_id must be a str object", 400
+        )
+    if not creator_id.strip():
+        return _reject(
+            creator_label, "missing_creator_id",
+            "Send a 'creator_id' with the text.", 400
+        )
+    if len(text) > config.MAX_TEXT_CHARS:
+        return _reject(
+            creator_id, "text_too_long",
+            f"Text is over {config.MAX_TEXT_CHARS} characters.", 413
+        )
+
+    import detector
+    try:
+        model_score = detector.model_signal(text)
+    except ValueError:
+        return _reject(
+            creator_id, "text_too_short",
+            "Text is too short to check — a few sentences at least.", 400
+        )
+    except detector.DetectorUnavailable as exc:
+        return _reject(
+            creator_id, "detector_unavailable", 
+            str(exc), 503
+        )
+
+    content_id = str(uuid.uuid4())
+
+    # Milestone 3: confidence, guess and label are placeholders until
+    # Milestones 4 and 5. style_score arrives in Milestone 4.
+    audit.log_decision(
+        content_id=content_id,
+        creator_id=creator_id,
+        guess=None,
+        model_score=model_score,
+        style_score=None,
+        combined_score=None,
+        label="PLACEHOLDER",
+        status="decided",
+    )
+
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /submit isn't built yet — see the TODO in app.py.",
-        "you_sent": {
-            "text_length": len(payload.get("text", "")),
-            "creator_id": payload.get("creator_id"),
-        },
-    }), 501
+        "content_id": content_id,
+        "guess": None,
+        "confidence": None,
+        "label": "PLACEHOLDER — not scored yet.",
+        "model_score": model_score,
+        "style_score": None,
+    })
+
+
+def _reject(creator_id: str, code: str, message: str, status: int):
+    """Refuse a request cleanly, and leave a trace of it in the log."""
+    audit.log_rejection(creator_id=creator_id, reason=code)
+    return jsonify({"error": code, "message": message}), status
 
 
 @app.post("/appeal")
