@@ -84,9 +84,26 @@ A writer who disagrees calls `POST /appeal` with the `content_id` and their reas
 <!-- Write the rule in words, then give the numbers. What happens when the two
      signals disagree? -->
 
-**The rule:** DRAFT, to be confirmed in Milestone 4 once signal two exists. A weighted average of the two scores, where two methods disagreeing lands in the middle ("unsure") rather than one overruling the other. The false-positive trace shows both signals are weak on plain human writing, so the AI label should be hard to reach: the AI threshold sits high.
+**The rule:** a weighted average that leans on the model signal, with two safeguards aimed at false accusations.
+1. Score = 0.6 × model_score + 0.4 × style_score. The model signal gets more weight because it measures predictability directly; the style signal only sees shape, and a few dashes or typos can move it.
+2. If the signals differ by more than 0.4, the score is pulled halfway to 0.5. Two methods disagreeing is itself uncertainty, so it should land in "unsure", not wherever the average falls.
+3. The score cannot enter the AI band unless both signals are at least 0.5. One signal alone never produces an AI label.
 
-**The numbers:** starting point from `config.py`: weights 0.5 (model) / 0.5 (style); thresholds human ≤ 0.35, AI ≥ 0.65. TODO: update after the four calibration inputs, and note any change to the model-signal midpoint (45.0).
+**The numbers** (all in `config.py`): `WEIGHT_MODEL_SIGNAL` 0.6, `WEIGHT_STYLE_SIGNAL` 0.4, `DISAGREEMENT_GAP` 0.4, `DISAGREEMENT_PULL` 0.5, `AI_BOTH_SIGNALS_MIN` 0.5; thresholds human ≤ 0.35, AI ≥ 0.65. I did not change the model-signal midpoint (45.0). Style signal: spread (weight 0.5), type-token ratio (0.25), punctuation density (0.25), each scaled to 0–1 AI-likeness in `stylometry.style_signal`.
+
+**Calibration run** (both signals printed separately; higher = more likely AI):
+
+| input | perplexity | model | style | combined | label |
+|---|---|---|---|---|---|
+| clearly AI | 16.1 | 0.84 | 0.41 | 0.58 | unsure |
+| clearly human | 113.0 | 0.19 | 0.02 | 0.12 | human |
+| formal human (Declaration of Independence opening) | 29.5 | 0.66 | 0.79 | 0.71 | **ai** |
+| plain human (grandmother paragraph) | 13.9 | 0.87 | 0.70 | 0.80 | **ai** |
+| lightly-edited AI | 30.5 | 0.65 | 0.14 | 0.47 | unsure |
+
+**Where they agree:** the clearly human text (both low) and both false positives (both high).
+
+**Where they disagree:** the clearly-AI text (model 0.84, style 0.41) and the lightly-edited AI (model 0.65, style 0.14).
 
 **Where it lives:** `scoring.py::combine_signals`
 
@@ -95,7 +112,9 @@ A writer who disagrees calls `POST /appeal` with the `content_id` and their reas
 
 **A case where my two signals split, and what my rule does with it:**
 
+The lightly-edited AI paragraph. Signal one says 0.65 because the words are still predictable. Signal two says 0.14, because casual edits ("honestly", "yeah", dashes, a lowercase "i") made the sentence lengths uneven and added punctuation. The signals differ by 0.51, which is over the 0.4 gap, so the rule pulls the 0.43 average toward 0.5 and the result is 0.47, "unsure". An AI paragraph gets through unflagged, which is the trade I chose: not accusing anyone costs less than missing one.
 
+**What my calibration did not fix:** both false positives. The plain human paragraph (0.80) and the formal human text (0.71) are labelled AI because both signals agree, so the disagreement rule and the both-signals rule cannot help. The formal text is one very long sentence, so spread is 0 and reads as "uniform"; it is also a famous text, so gpt2 has probably seen it, which lowers perplexity. It is a poor test of formal writing and I should add a second formal sample. The clearly-AI paragraph only reaches "unsure" (0.58) because its sentence lengths vary more than my spread cutoff expects.
 
 ---
 

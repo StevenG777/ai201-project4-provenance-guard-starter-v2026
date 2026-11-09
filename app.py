@@ -249,17 +249,23 @@ def submit():
             str(exc), 503
         )
 
+    import stylometry
+    style_score = stylometry.style_signal(text)
+
+    import scoring
+    combined = scoring.combine_signals(model_score, style_score)
+
     content_id = str(uuid.uuid4())
 
-    # Milestone 3: confidence, guess and label are placeholders until
-    # Milestones 4 and 5. style_score arrives in Milestone 4.
+    # Milestone 4: combined score is real; guess and label stay placeholders
+    # until Milestone 5.
     audit.log_decision(
         content_id=content_id,
         creator_id=creator_id,
         guess=None,
         model_score=model_score,
-        style_score=None,
-        combined_score=None,
+        style_score=style_score,
+        combined_score=combined,
         label="PLACEHOLDER",
         status="decided",
     )
@@ -267,10 +273,10 @@ def submit():
     return jsonify({
         "content_id": content_id,
         "guess": None,
-        "confidence": None,
+        "confidence": combined,
         "label": "PLACEHOLDER — not scored yet.",
         "model_score": model_score,
-        "style_score": None,
+        "style_score": style_score,
     })
 
 

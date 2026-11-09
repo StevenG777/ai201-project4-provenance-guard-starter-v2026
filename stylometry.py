@@ -64,8 +64,15 @@ def sentence_length_spread(text: str) -> float:
     `stdev` raises on fewer than two values. Decide what that should return
     before the attack set decides for you.
     """
-    # TODO: replace this
-    return 0.0
+    lengths = [
+        len(words(x)) 
+        for x in sentences(text)
+    ]
+    if len(lengths) < 2:
+        return 0.0  # one sentence: no spread to measure, reads as "uniform"
+    mean = statistics.mean(lengths)
+    std = statistics.stdev(lengths) / mean if mean else 0.0
+    return std
 
 
 def type_token_ratio(text: str) -> float:
@@ -80,8 +87,8 @@ def type_token_ratio(text: str) -> float:
     directly comparable on it, and if your test inputs vary a lot in length,
     that alone can look like a signal.
     """
-    # TODO: replace this
-    return 0.0
+    w = words(text)
+    return len(set(w)) / len(w) if w else 0.0
 
 
 def punctuation_density(text: str) -> float:
@@ -94,8 +101,10 @@ def punctuation_density(text: str) -> float:
         more interesting than full stops, because they vary more between
         writers.
     """
-    # TODO: replace this
-    return 0.0
+    # Marks that vary between writers, per 100 words. Full stops are excluded.
+    marks = re.findall(r"[,;:!?()\-\u2014\u2013\"\u201c\u201d]", text)
+    w = words(text)
+    return 100 * len(marks) / len(w) if w else 0.0
 
 
 # ── Combining them ───────────────────────────────────────────────────────────
@@ -122,8 +131,19 @@ def style_signal(text: str) -> float:
     you trust it. Plain and ordinary, not formal: formal prose reads as *human*
     to signal one, and it is plain writing that gets accused.
     """
-    # TODO: replace this
-    return 0.5
+    def clamp(x):
+        return min(max(x, 0.0), 1.0)
+
+    # Each measure is turned into "AI-likeness", 0 (human) to 1 (AI).
+    # Spread: CV ~0.25 or less is even/AI-ish, ~0.7 or more is lumpy/human.
+    spread_ai = clamp(1 - sentence_length_spread(text) / 0.7)
+    # TTR: 0.55 or less is repetitive/AI-ish, 0.85 or more is varied/human.
+    ttr_ai = clamp((0.85 - type_token_ratio(text)) / 0.30)
+    # Punctuation: ~2 marks per 100 words or fewer is flat, ~12+ is varied.
+    punct_ai = clamp(1 - (punctuation_density(text) - 2) / 10)
+
+    # Spread is the strongest of the three; TTR and punctuation are noisier.
+    return round(0.5 * spread_ai + 0.25 * ttr_ai + 0.25 * punct_ai, 4)
 
 
 if __name__ == "__main__":
@@ -139,4 +159,3 @@ if __name__ == "__main__":
     print(f"type_token_ratio         {type_token_ratio(text)}")
     print(f"punctuation_density      {punctuation_density(text)}")
     print(f"style_signal             {style_signal(text)}   (higher = more likely AI)")
-    print("\nAll zeros? These are stubs — Milestone 4 is where you build them.")

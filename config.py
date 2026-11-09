@@ -46,6 +46,10 @@ DETECTOR_MODEL = os.getenv("AI201_DETECTOR_MODEL", "gpt2")
 # 300 words, which is enough for the signal to mean something.
 DETECTOR_MAX_TOKENS = 400
 
+# Longest text /submit accepts, in characters. Anything over it is refused
+# with a 413 before the model ever sees it.
+MAX_TEXT_CHARS = 10_000
+
 
 # ─── Scoring (Milestone 4) ───────────────────────────────────────────────────
 # How much each signal counts toward the combined score.
@@ -54,8 +58,17 @@ DETECTOR_MAX_TOKENS = 400
 # down BEFORE you code it, and to put the numbers in your README. Whatever you
 # decide, it goes here.
 
-WEIGHT_MODEL_SIGNAL = 0.5
-WEIGHT_STYLE_SIGNAL = 0.5
+WEIGHT_MODEL_SIGNAL = 0.6   # perplexity reads actual predictability
+WEIGHT_STYLE_SIGNAL = 0.4   # shape-only, and trivially edited
+
+# If the signals differ by more than this, they are disagreeing, and the
+# disagreement is itself uncertainty: pull the score toward 0.5.
+DISAGREEMENT_GAP = 0.4
+DISAGREEMENT_PULL = 0.5     # 0 = ignore disagreement, 1 = force to 0.5
+
+# False-positive guard: a score only reaches the AI band if BOTH signals are
+# at least this high. A wrong accusation costs more than a missed detection.
+AI_BOTH_SIGNALS_MIN = 0.5
 
 
 # ─── Thresholds (Milestone 5) ────────────────────────────────────────────────
