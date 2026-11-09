@@ -46,7 +46,7 @@ Provenance Guard is a small backend a writing site could plug into. A piece of t
 3. **Signal two.** `stylometry.style_signal` scores the shape of the text → `style_score`.
 4. **Combine.** `scoring.combine_signals` merges them into one `confidence` number (higher = more likely AI).
 5. **Label.** `scoring.score_to_label` maps the number to one of three labels using the thresholds in `config.py`.
-6. **Log.** `audit.log_decision` records the decision, both signal scores and status `classified`.
+6. **Log.** `audit.log_decision` records the decision, both signal scores and status `decided`.
 7. **Respond.** JSON with `content_id`, `guess`, `confidence`, `label`, `model_score`, `style_score`.
 
 A writer who disagrees calls `POST /appeal` with the `content_id` and their reasoning. The item moves to `under_review` and the appeal is logged.
@@ -228,17 +228,17 @@ The original decision and the appeal sit side by side for the same `content_id`.
 
 ## How I Used AI
 
-**Moment 1**
+**Moment 1: checking my `/submit` validation**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* curl and Python requests to test the normal and error cases of my `/submit` route.
+- *What came back:* the test requests, plus two problems it found in my handler. The `missing_text` branch could never run, because the check above it already rejected empty text. And a missing `creator_id` returned the error code `"invalid creator_id"` with a space, unlike every other code.
+- *What I changed:* I split the type check from the empty check so `missing_text` is reachable, and I used the requests to confirm each error returns the status code I expected (400, 413). The `"invalid creator_id"` code is still inconsistent and I have not fixed it.
 
-**Moment 2**
+**Moment 2: building the style signal and combining rule**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- *What I asked for:* the second signal in `stylometry.py` and the combining rule in `scoring.py`, then to run my calibration inputs through both signals and print them separately.
+- *What came back:* three scaled measures (sentence-length spread, type-token ratio, punctuation density), a 0.6/0.4 weighted average, a rule that pulls the score toward 0.5 when the signals disagree, and a rule that blocks the AI label unless both signals lean AI. The calibration table showed that both rules fail on exactly my false-positive case: a plain human paragraph scored 0.80 because both signals read short even sentences as AI. It also showed the clearly-AI paragraph only reaching "unsure" (0.58).
+- *What I changed:* nothing in the numbers yet. I kept the weights and thresholds, and wrote the plain-human false positive and the weak style score into the README as unresolved findings, because tuning the cutoffs to those four inputs would only fit the sample.
 
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 

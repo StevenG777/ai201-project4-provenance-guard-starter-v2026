@@ -9,7 +9,7 @@ Written before building the endpoints. Fixed details here are the contract the c
 3. **Signal two — `stylometry.style_signal(text)`.** Measures the text as text: sentence-length spread, type-token ratio, punctuation density. Adds `style_score` (0–1, same direction).
 4. **Combine — `scoring.combine_signals`.** Turns the two scores into one `confidence` number.
 5. **Label — `scoring.score_to_label`.** Thresholds in `config.py` pick one of three bands and return `guess` + label text.
-6. **Log — `audit.log_decision`.** Stores content_id, creator_id, both signal scores, combined score, guess, label, status `classified`.
+6. **Log — `audit.log_decision`.** Stores content_id, creator_id, both signal scores, combined score, guess, label, status `decided`.
 7. **Response.** JSON with `content_id`, `guess`, `confidence`, `label`, `model_score`, `style_score`.
 
 Appeal branch: `POST /appeal` → confirm `content_id` exists (`audit.entries_for`) → `audit.log_appeal` sets status `under_review` → confirm to the writer.
