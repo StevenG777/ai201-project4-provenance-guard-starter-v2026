@@ -20,18 +20,16 @@ Appeal branch: `POST /appeal` → confirm `content_id` exists (`audit.entries_fo
 - **Measures:** perplexity of the raw text under a local language model (gpt2). Low perplexity means the model could have guessed it.
 - **Why it may differ:** AI text is built from likely next words, so it is predictable. Human text has odd word choices, slang, errors and specifics, so it surprises the model more.
 - **Blind spot:** predictability is not authorship. Plain writing in common words and short sentences (young writers, second-language writers, anyone writing simply) scores as machine-like. Measured: a plain human paragraph had perplexity 9.4 → `model_score` 0.92, higher than a stiff AI-style paragraph (0.79). Ornate human prose with rare words can look human to it, and so can AI text that is deliberately ornate.
-- Empty or tiny input is an input-validation case, not a blind spot; `/submit` rejects it.
 
 ### Signal two — style signal (`stylometry.py`)
 - **Measures:**
   - `sentence_length_spread` — do sentence lengths vary or march in step?
   - `type_token_ratio` — how much of the vocabulary repeats?
   - `punctuation_density` — how much punctuation and how varied (semicolons and dashes count more than full stops).
-- **Why it may differ:** AI prose tends toward even, mid-length sentences and a narrower vocabulary. Human writing is lumpier. Dashes and semicolons are a weak hint only; humans use dashes too.
+- **Why it may differ:** AI prose tends toward even, mid-length sentences and a narrower vocabulary.
 - **Blind spots:**
   - It cannot read. Typos, broken-up sentences or pasted quotations change the shape without changing who wrote it.
   - `words()` matches only `[a-z0-9']+`, so non-Latin text (Chinese, Russian) yields no words and the signal is unreliable or meaningless for it.
-  - Plain human writing also has even short sentences, so it shares signal one's weakness.
 
 ## 3. Trace of a false positive
 
@@ -39,7 +37,10 @@ A student writes a simple paragraph about their hometown, in their own words.
 - **Score:** signal one gives perplexity about 9 → `model_score` about 0.92. Signal two is not built yet; plain short even sentences will probably score AI-ish too (to be measured in Milestone 4). Combined likely above the 0.65 AI threshold.
 - **Label:** the high-confidence AI label.
 - **What they can do:** `POST /appeal` with their reasoning; the item moves to `under_review`.
-- **Design consequences:** (a) the AI threshold may need to sit higher, or the AI label should need both signals to agree; (b) label wording must not read as an accusation; (c) the label should tell the writer an appeal exists.
+- **Design consequences:** 
+  - (a) the AI threshold may need to sit higher, or the AI label should need both signals to agree; 
+  - (b) label wording must not read as an accusation; 
+  - (c) the label should tell the writer an appeal exists.
 
 ## 4. Endpoint contracts
 
@@ -76,7 +77,3 @@ Response 200:
 Errors: 400 `invalid_json` / `missing_content_id` / `missing_reasoning`; 404 `unknown_content_id`.
 
 Decisions: appealing the same item twice returns 200 and records it again. The same creator submitting the same text twice gets a new `content_id` each time. `/appeal` does not check ownership (no `creator_id` in the request); this is a known limitation.
-
-### Open questions an outside builder would ask
-- Exact minimum text length and length cap (to be fixed when `/submit` is built).
-- Exact label sentences and score ranges (Milestone 5; ranges come from `config.py` via `scoring.label_ranges()`).

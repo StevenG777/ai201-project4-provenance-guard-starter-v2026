@@ -127,14 +127,13 @@ The lightly-edited AI paragraph. Signal one says 0.65 because the words are stil
 
 | Label | Score range | The exact text a reader sees |
 |---|---|---|
-| high-confidence human |  |  |
-| unsure |  |  |
-| high-confidence AI |  |  |
+| high-confidence human | 0.00 – 0.35 | We think this was probably written by a person. |
+| unsure | 0.35 – 0.65 | We can't tell whether this was written by a person or with AI, so we haven't made a call. Nothing is wrong with your work. If you'd like someone to look at it, you can appeal. |
+| high-confidence AI | 0.65 – 1.00 | Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look. |
 
 **Why I worded the "unsure" one this way:**
-<!-- It's the hardest of the three. It has to admit uncertainty without
-     sounding like an accusation, because the person reading it may well have
-     written every word themselves. -->
+
+It says "we haven't made a call" instead of hinting at a verdict, and says outright that nothing is wrong with the work, because most people who see it will have written every word themselves. It names the appeal as an option, not a next step they must take. The AI label also admits the tool can be wrong and names the case it is worst at (plain, simple writing), because that is the false positive I traced in DESIGN.md.
 
 
 
@@ -181,45 +180,47 @@ $ curl -X POST http://127.0.0.1:5000/submit \
 
 **An appeal**
 
+I appealed a plain human paragraph about a grandmother that the system labelled AI (score 0.7999).
+
 ```bash
 $ curl -X POST http://127.0.0.1:5000/appeal \
   -H "Content-Type: application/json" \
-  -d '{"content_id": "...", "reasoning": "..."}'
-```
-
-```json
-
-```
-
-**What the log shows afterwards**
-
-```bash
-$ curl "http://127.0.0.1:5000/log?limit=3"
+  -d '{"content_id": "da0d5511-c7b8-47d8-bc72-a503c62e3b1a", "reasoning": "I wrote this myself about my grandmother. I write in short, simple sentences."}'
 ```
 
 ```json
 {
-  "count": 2,
-  "entries": [
-    {
-      "combined_score": null,
-      "content_id": "1c37ba5c-e991-4055-82a2-8ecf61ada26f",
-      "creator_id": "writer_01",
-      "guess": null,
-      "label": "PLACEHOLDER",
-      "model_score": 0.8531,
-      "status": "decided",
-      "style_score": null,
-      "timestamp": "2026-11-09T02:15:34+00:00"
-    },
-    {
-      "creator_id": "writer_01",
-      "event": "rejected",
-      "reason": "invalid_text",
-      "status": "rejected",
-      "timestamp": "2026-11-09T02:15:35+00:00"
-    }
-  ]
+  "content_id": "da0d5511-c7b8-47d8-bc72-a503c62e3b1a",
+  "message": "Thanks — your appeal was recorded and a person will review it.",
+  "status": "under_review"
+}
+```
+
+An unknown id returns 404 `unknown_content_id`, a missing `reasoning` returns 400 `missing_reasoning`, and a non-JSON body returns 400 `invalid_json`.
+
+**What the log shows afterwards**
+
+The original decision and the appeal sit side by side for the same `content_id`. The log is append-only, so the decision is never overwritten; the appeal entry carries the new status.
+
+```json
+{
+  "combined_score": 0.7999,
+  "content_id": "da0d5511-c7b8-47d8-bc72-a503c62e3b1a",
+  "creator_id": "w",
+  "guess": "ai",
+  "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.",
+  "model_score": 0.8679,
+  "status": "decided",
+  "style_score": 0.6979,
+  "timestamp": "2026-11-09T03:56:07+00:00"
+}
+{
+  "content_id": "da0d5511-c7b8-47d8-bc72-a503c62e3b1a",
+  "creator_id": "w",
+  "event": "appeal",
+  "reasoning": "I wrote this myself about my grandmother. I write in short, simple sentences.",
+  "status": "under_review",
+  "timestamp": "2026-11-09T03:59:08+00:00"
 }
 ```
 

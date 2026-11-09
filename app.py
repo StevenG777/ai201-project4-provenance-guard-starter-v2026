@@ -255,26 +255,26 @@ def submit():
     import scoring
     combined = scoring.combine_signals(model_score, style_score)
 
+    guess, label_text = scoring.score_to_label(combined)
+
     content_id = str(uuid.uuid4())
 
-    # Milestone 4: combined score is real; guess and label stay placeholders
-    # until Milestone 5.
     audit.log_decision(
         content_id=content_id,
         creator_id=creator_id,
-        guess=None,
+        guess=guess,
         model_score=model_score,
         style_score=style_score,
         combined_score=combined,
-        label="PLACEHOLDER",
+        label=label_text,
         status="decided",
     )
 
     return jsonify({
         "content_id": content_id,
-        "guess": None,
+        "guess": guess,
         "confidence": combined,
-        "label": "PLACEHOLDER — not scored yet.",
+        "label": label_text,
         "model_score": model_score,
         "style_score": style_score,
     })
@@ -306,14 +306,51 @@ def appeal():
     to the person on the other end. It's the only thing standing between a
     wrong accusation and nothing at all.
     """
-    payload = request.get_json(silent=True) or {}
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return _reject(
+            "unknown", "invalid_json",
+            "The request body must be a JSON object.", 400
+        )
 
-    # TODO: delete this and build the route.
+    content_id = payload.get("content_id")
+    reasoning = payload.get("reasoning")
+    if not isinstance(content_id, str) or not content_id.strip():
+        return _reject(
+            "unknown", "missing_content_id",
+            "Send the 'content_id' of the item you are appealing.", 400
+        )
+    if not isinstance(reasoning, str) or not reasoning.strip():
+        return _reject(
+            "unknown", "missing_reasoning",
+            "Tell us why you think this was wrong, in the 'reasoning' field.", 400
+        )
+    if len(reasoning) > config.MAX_TEXT_CHARS:
+        return _reject(
+            "unknown", "reasoning_too_long",
+            f"Reasoning is over {config.MAX_TEXT_CHARS} characters.", 413
+        )
+
+    content_id = content_id.strip()
+    # Only a real decision can be appealed; rejections and appeals don't count.
+    decisions = [e for e in audit.entries_for(content_id)
+                 if e.get("event") is None and e.get("status") != "rejected"]
+    if not decisions:
+        return _reject(
+            "unknown", "unknown_content_id",
+            "We have no submission with that content_id. Check it for typos.", 404
+        )
+
+    audit.log_appeal(
+        content_id=content_id,
+        creator_id=decisions[0]["creator_id"],
+        reasoning=reasoning.strip(),
+    )
     return jsonify({
-        "error": "not_implemented",
-        "message": "POST /appeal isn't built yet — see the TODO in app.py.",
-        "you_sent": payload,
-    }), 501
+        "content_id": content_id,
+        "status": "under_review",
+        "message": "Thanks — your appeal was recorded and a person will review it.",
+    })
 
 
 # ── Already works ─────────────────────────────────────────────────────────────
