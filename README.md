@@ -95,8 +95,6 @@ A writer who disagrees calls `POST /appeal` with the `content_id` and their reas
 
 **A case where my two signals split, and what my rule does with it:**
 
-TODO (Milestone 4): needs real signal-two scores. Expected candidate: a plain, even-sentenced human paragraph, where signal one says strongly AI (0.92 measured) while signal two may say otherwise.
-
 
 
 ---
@@ -128,21 +126,38 @@ TODO (Milestone 4): needs real signal-two scores. Expected candidate: a plain, e
 <!-- One submission and one appeal, pasted as text: the request, the response,
      and the log entries. -->
 
-**A submission**
-
-<!-- The response needs content_id, guess, confidence, label, AND both
-     signal scores - model_score and style_score. Unit 8's tools read those
-     two off the response, so leaving them out costs you next unit's
-     diagnostics. -->
+**A submission** (Milestone 3: only signal one is wired in, so `guess`, `confidence`, `style_score` and the label are placeholders)
 
 ```bash
 $ curl -X POST http://127.0.0.1:5000/submit \
   -H "Content-Type: application/json" \
-  -d '{"text": "...", "creator_id": "..."}'
+  -d '{"text": "My grandmother grew up on a farm in Ohio. She woke up early every day to feed the animals. After breakfast she helped her mother clean the house. In the evening the family ate dinner together.", "creator_id": "writer_01"}'
 ```
 
 ```json
+{
+  "confidence": null,
+  "content_id": "1c37ba5c-e991-4055-82a2-8ecf61ada26f",
+  "guess": null,
+  "label": "PLACEHOLDER — not scored yet.",
+  "model_score": 0.8531,
+  "style_score": null
+}
+```
 
+A bad request (no `text`) is refused and the refusal is logged:
+
+```bash
+$ curl -X POST http://127.0.0.1:5000/submit \
+  -H "Content-Type: application/json" \
+  -d '{"creator_id": "writer_01"}'
+```
+
+```json
+{
+  "error": "invalid_text",
+  "message": "The text content must be a str object."
+}
 ```
 
 **An appeal**
@@ -164,7 +179,29 @@ $ curl "http://127.0.0.1:5000/log?limit=3"
 ```
 
 ```json
-
+{
+  "count": 2,
+  "entries": [
+    {
+      "combined_score": null,
+      "content_id": "1c37ba5c-e991-4055-82a2-8ecf61ada26f",
+      "creator_id": "writer_01",
+      "guess": null,
+      "label": "PLACEHOLDER",
+      "model_score": 0.8531,
+      "status": "decided",
+      "style_score": null,
+      "timestamp": "2026-11-09T02:15:34+00:00"
+    },
+    {
+      "creator_id": "writer_01",
+      "event": "rejected",
+      "reason": "invalid_text",
+      "status": "rejected",
+      "timestamp": "2026-11-09T02:15:35+00:00"
+    }
+  ]
+}
 ```
 
 ---
