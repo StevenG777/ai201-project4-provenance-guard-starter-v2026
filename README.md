@@ -39,7 +39,7 @@
 <!-- The path a submission takes, from arriving to the label a reader sees.
      Six or seven steps — this is the trace you wrote in Milestone 1. -->
 
-Provenance Guard is a small backend a writing site could plug into. A piece of text goes in; a guess, a score, a plain-English label and a way to appeal come out. More detail in [DESIGN.md](DESIGN.md).
+Provenance Guard is a small backend a writing site could plug into. A piece of text goes in; a guess, a score, a plain-English label and a way to appeal come out.
 
 1. **Request arrives.** `POST /submit` with `text` and `creator_id`. `app.py` validates it (missing, empty, too short, too long, not JSON) and creates a `content_id`.
 2. **Signal one.** `detector.model_signal` scores how predictable the text is to a local gpt2 model → `model_score`.
@@ -276,23 +276,110 @@ The first 5 pass, the remaining 10 are rejected with 429, and each rejection is 
 
 ## Attack Run — Before
 
-<!-- Every attack with its outcome and a held-or-broke mark.
-     `run_attacks.py --label before` produces the table. -->
+56 attacks (`attack_set/attacks.csv` and `attack_set/attacks_malformed_requests.csv`), run once with `python run_attacks.py --set attack_set` before any change from this unit beyond the limiter (5/min, 40/day). Full output: `results/attack_run_2026-11-15_1042.md`.
 
+**How I marked held or broke.** The only accusation my service makes is the AI label, so I judged each family against that:
+- *evasion*: the text is AI-written. HELD only if it came back labelled AI. "Unsure" counts as BROKE, because the AI text got past the detector.
+- *false_positive*: the text is human-written. BROKE if it came back labelled AI (a real writer accused). "Unsure" or "human" is HELD.
+- *prompt_injection*: HELD if the instruction in the text did not get what it asked for. BROKE if it did.
+- *malformed*: HELD if the service rejected it cleanly or handled it without a crash and without a confident wrong answer. A 500, or a confident AI label on something that isn't writing, is BROKE.
+- *flood_same_creator*: HELD if the limiter let the first requests through and then returned 429.
 
+| Family | Held | Broke |
+|---|---|---|
+| evasion | 1 | 9 |
+| false_positive | 4 | 4 |
+| prompt_injection | 5 | 1 |
+| malformed | 17 | 3 |
+| flood_same_creator | 12 | 0 |
+| **Total** | **39** | **17** |
 
-**Ten audit log entries from the run**
+| ID | Family | Status | Guess | Score | Mark | Note |
+|---|---|---|---|---|---|---|
+| EV01 | evasion | 200 | unsure | 0.412 | BROKE | AI text + typos; signal one scored it 0.16 (human-leaning) |
+| EV02 | evasion | 200 | unsure | 0.441 | BROKE |  |
+| EV03 | evasion | 200 | unsure | 0.521 | BROKE |  |
+| EV04 | evasion | 200 | unsure | 0.579 | BROKE |  |
+| EV05 | evasion | 200 | human | 0.262 | BROKE | heavily edited AI text called human |
+| EV06 | evasion | 200 | unsure | 0.464 | BROKE |  |
+| EV07 | evasion | 200 | unsure | 0.577 | BROKE |  |
+| EV08 | evasion | 200 | unsure | 0.366 | BROKE |  |
+| EV09 | evasion | 200 | unsure | 0.556 | BROKE |  |
+| EV10 | evasion | 200 | ai | 0.875 | HELD | labelled AI (0.875) |
+| FP01 | false_positive | 200 | unsure | 0.587 | HELD | not accused, but 0.587 is close to the line |
+| FP02 | false_positive | 200 | ai | 0.721 | BROKE | real human writing accused of AI |
+| FP03 | false_positive | 200 | ai | 0.732 | BROKE | real human writing accused of AI |
+| FP04 | false_positive | 200 | ai | 0.709 | BROKE | real human writing accused of AI |
+| FP05 | false_positive | 200 | ai | 0.781 | BROKE | real human writing accused of AI |
+| FP06 | false_positive | 200 | unsure | 0.610 | HELD |  |
+| FP07 | false_positive | 200 | unsure | 0.608 | HELD |  |
+| FP08 | false_positive | 200 | unsure | 0.370 | HELD |  |
+| PI01 | prompt_injection | 200 | unsure | 0.388 | HELD | instruction ignored; unsure |
+| PI02 | prompt_injection | 200 | human | 0.212 | BROKE | AI text asked for 'human' and got 'human' (0.212) |
+| PI03 | prompt_injection | 200 | unsure | 0.524 | HELD | instruction ignored; unsure |
+| PI04 | prompt_injection | 200 | unsure | 0.428 | HELD | label is a fixed string, nothing echoed |
+| PI05 | prompt_injection | 200 | unsure | 0.475 | HELD | log line stayed one clean entry |
+| PI06 | prompt_injection | 200 | unsure | 0.555 | HELD | instruction ignored |
+| MF01 | malformed | 400 | — | — | HELD | 400 |
+| MF02 | malformed | 400 | — | — | HELD | 400 |
+| MF03 | malformed | 200 | unsure | 0.400 | HELD | no crash, but control characters were scored instead of rejected |
+| MF04 | malformed | 200 | unsure | 0.453 | HELD | no crash, but punctuation-only was scored instead of rejected |
+| MF05 | malformed | 200 | ai | 0.899 | BROKE | one repeated letter labelled AI (0.899) |
+| MF06 | malformed | 200 | ai | 0.998 | BROKE | emoji-only labelled AI (0.998) |
+| MF07 | malformed | 200 | ai | 0.944 | BROKE | Arabic text labelled AI (0.944) |
+| MF08 | malformed | 413 | — | — | HELD | 413 |
+| RQ01 | malformed | 400 | — | — | HELD | 400 |
+| RQ02 | malformed | 400 | — | — | HELD | 400 |
+| RQ03 | malformed | 400 | — | — | HELD | 400 |
+| RQ04 | malformed | 400 | — | — | HELD | 400 |
+| RQ05 | malformed | 400 | — | — | HELD | 400 |
+| RQ06 | malformed | 400 | — | — | HELD | 400 |
+| RQ07 | malformed | 400 | — | — | HELD | 400 |
+| RQ08 | malformed | 400 | — | — | HELD | 400 |
+| RQ09 | malformed | 400 | — | — | HELD | 400 |
+| RQ10 | malformed | 429 | — | — | HELD | 429, never reached my route (no usable creator_id, so counted against my IP) |
+| RQ11 | malformed | 429 | — | — | HELD | 429, never reached my route (no usable creator_id, so counted against my IP) |
+| RQ12 | malformed | 400 | — | — | HELD | 400 |
+| FL01_01 | flood_same_creator | 200 | unsure | 0.409 | HELD | allowed |
+| FL01_02 | flood_same_creator | 200 | unsure | 0.409 | HELD | allowed |
+| FL01_03 | flood_same_creator | 200 | unsure | 0.409 | HELD | allowed |
+| FL01_04 | flood_same_creator | 200 | unsure | 0.409 | HELD | allowed |
+| FL01_05 | flood_same_creator | 200 | unsure | 0.409 | HELD | allowed |
+| FL01_06 | flood_same_creator | 429 | — | — | HELD | 429 |
+| FL01_07 | flood_same_creator | 429 | — | — | HELD | 429 |
+| FL01_08 | flood_same_creator | 429 | — | — | HELD | 429 |
+| FL01_09 | flood_same_creator | 429 | — | — | HELD | 429 |
+| FL01_10 | flood_same_creator | 429 | — | — | HELD | 429 |
+| FL01_11 | flood_same_creator | 429 | — | — | HELD | 429 |
+| FL01_12 | flood_same_creator | 429 | — | — | HELD | 429 |
 
-<!-- Choose entries that show the interesting failures, not the ten easiest. -->
+**Ten audit log entries from this run** (from `logs/audit.jsonl`; the last two are rejected requests, which carry fewer fields):
 
 ```json
+{"timestamp": "2026-11-15T18:41:57+00:00", "content_id": "254e4316-49ec-48e0-9697-d4bdc9b57f19", "creator_id": "attacker_EV01", "guess": "unsure", "model_score": 0.1635, "style_score": 0.5675, "combined_score": 0.4125, "label": "We can't tell whether this was written by a person or with AI, so we haven't made a call. Nothing is wrong with your work. If you'd like someone to look at it, you can appeal.", "status": "decided"}
 
+{"timestamp": "2026-11-15T18:41:58+00:00", "content_id": "6db04892-dbd8-4dd8-a8bd-e13e39dc3f20", "creator_id": "attacker_EV05", "guess": "human", "model_score": 0.3212, "style_score": 0.1723, "combined_score": 0.2616, "label": "We think this was probably written by a person.", "status": "decided"}
+
+{"timestamp": "2026-11-15T18:41:59+00:00", "content_id": "67fe0420-1dae-4de9-b825-8f569f1f0b0c", "creator_id": "attacker_PI02", "guess": "human", "model_score": 0.2044, "style_score": 0.2233, "combined_score": 0.212, "label": "We think this was probably written by a person.", "status": "decided"}
+
+{"timestamp": "2026-11-15T18:41:58+00:00", "content_id": "9b3839a3-aab7-4397-aa99-97ab147f8f5a", "creator_id": "attacker_FP02", "guess": "ai", "model_score": 0.7387, "style_score": 0.6946, "combined_score": 0.7211, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+
+{"timestamp": "2026-11-15T18:41:59+00:00", "content_id": "dd655b36-3e4b-4c3d-a3f5-81b4d3e93b3f", "creator_id": "attacker_FP05", "guess": "ai", "model_score": 0.8005, "style_score": 0.751, "combined_score": 0.7807, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+
+{"timestamp": "2026-11-15T18:41:58+00:00", "content_id": "6fb3a6f2-036b-4934-9a82-6e2c9f702808", "creator_id": "attacker_FP03", "guess": "ai", "model_score": 0.8051, "style_score": 0.6215, "combined_score": 0.7317, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+
+{"timestamp": "2026-11-15T18:41:59+00:00", "content_id": "39987804-1dc9-48fd-8dac-2e602317ab36", "creator_id": "attacker_MF05", "guess": "ai", "model_score": 0.9976, "style_score": 0.75, "combined_score": 0.8986, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+
+{"timestamp": "2026-11-15T18:42:00+00:00", "content_id": "a6acb607-e0d2-4667-b5fb-4a16b9225f59", "creator_id": "attacker_MF06", "guess": "ai", "model_score": 0.9969, "style_score": 1.0, "combined_score": 0.9981, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+
+{"timestamp": "2026-11-15T18:42:00+00:00", "content_id": "f7a6d78f-047c-4139-8818-aa3802ec4f58", "creator_id": "attacker_MF07", "guess": "ai", "model_score": 0.9064, "style_score": 1.0, "combined_score": 0.9438, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+
+{"timestamp": "2026-11-15T18:41:59+00:00", "creator_id": "attacker_MF01", "event": "rejected", "status": "rejected", "reason": "missing_text"}
+
+{"timestamp": "2026-11-15T18:42:00+00:00", "creator_id": "attacker_flood", "event": "rejected", "status": "rejected", "reason": "rate_limited", "limit": "5 per 1 minute"}
 ```
 
-**The single worst outcome** — the one I'd least want to explain to a writer
-whose work got caught by it:
-
-
+**Worst outcome: FP05.** A person's technical documentation ("To configure the service, edit the settings file...") came back labelled AI at a combined score of 0.78, with model_score 0.80 and style_score 0.75. Both signals leaned AI. Plain, instructional writing is exactly what a real writer produces, and this writer would be told AI probably wrote their own work.
 
 ---
 
