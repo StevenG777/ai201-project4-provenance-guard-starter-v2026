@@ -246,25 +246,31 @@ The original decision and the appeal sit side by side for the same `content_id`.
 
 ## Rate Limiting
 
-**My limits:** ___ per minute, ___ per day
+**My limits:**  5 per minute, 40 per day
 
 **Why those numbers and not others:**
-<!-- Think about two people: a real writer submitting their own work a few
-     times an hour, and a script sending a thousand variations to map your
-     thresholds. Your numbers have to be liveable for the first and hostile to
-     the second. -->
 
-**What a caller counts as:** <!-- per address, or per creator_id? They fail
-differently — one script can look like a thousand callers, and one household
-can look like one. -->
+A real writer submits their own work a few times an hour. Even a heavy session (paste a draft, read the label, edit, resubmit) is rarely more than a handful of submissions in a minute, so 5 per minute never gets in their way. 40 per day covers a full day of drafting and appeals with room to spare.
+
+A script mapping my thresholds needs hundreds of probes with small variations. At 5 per minute and 40 per day it gets 40 data points a day from one identity, which is too few to map the 0.35 / 0.65 boundaries. I did not go lower because a writer who hits a limit while legitimately revising would be locked out of their own appeal path. I did not go higher because the starter's 10/min and 200/day would still let a script collect 200 probes a day.
+
+**What a caller counts as:** the `creator_id` in the request body, falling back to the caller's IP address when `creator_id` is missing or not a string (`rate_limit_key` in `app.py`).
+
+- Keying on `creator_id` means one household or office sharing an IP does not share a quota.
+- The weaknesses are:
+     - `creator_id` is self-reported. A script can rotate IDs to dodge the limit, and each fresh ID gets a fresh quota. 
+     - Keying on IP alone fails the other way: one script is one caller, but one household is also one caller.
+     - Storage is in-memory, so a restart forgets every count.
 
 **The run of status codes when I pushed past it:**
 
-<!-- python run_attacks.py --flood 15 -->
+`python run_attacks.py --flood 15` (15 submissions from one `creator_id`; saved to `results/flood_2026-11-15_1844.md`):
 
 ```
-
+200 200 200 200 200 429 429 429 429 429 429 429 429 429 429
 ```
+
+The first 5 pass, the remaining 10 are rejected with 429, and each rejection is written to `logs/audit.jsonl`.
 
 ---
 

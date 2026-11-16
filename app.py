@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
 """
-Provenance Guard — the web service.
+    Provenance Guard — the web service.
 
-    python app.py
+        python app.py
 
-Then, in another terminal:
+    Then, in another terminal:
 
-    curl -X POST http://127.0.0.1:5000/ping \
-      -H "Content-Type: application/json" \
-      -d '{"message": "hello"}'
+        curl -X POST http://127.0.0.1:5000/ping \
+        -H "Content-Type: application/json" \
+        -d '{"message": "hello"}'
 
-That's the example route. It works right now, before you've written anything.
-**Leave it alone** — it's your control. When something breaks later, check that
-`/ping` still answers: if it does, the problem is in your handler; if it
-doesn't, it's the service itself.
+    That's the example route. It works right now, before you've written anything.
+    **Leave it alone** — it's your control. When something breaks later, check that
+    `/ping` still answers: if it does, the problem is in your handler; if it
+    doesn't, it's the service itself.
 
-Routes:
+    Routes:
 
-    POST /ping        the worked example. Already works. Don't edit it
-    POST /submit      ← YOU BUILD THIS (Milestone 3, 4, 5)
-    POST /appeal      ← YOU BUILD THIS (Milestone 5)
-    GET  /log         the audit log. Already works
-    GET  /health      is the service up, and is the model loaded
+        POST /ping        the worked example. Already works. Don't edit it
+        POST /submit      ← YOU BUILD THIS (Milestone 3, 4, 5)
+        POST /appeal      ← YOU BUILD THIS (Milestone 5)
+        GET  /log         the audit log. Already works
+        GET  /health      is the service up, and is the model loaded
 """
 
 import uuid
@@ -151,7 +151,7 @@ def health():
 # ── YOU BUILD THIS ────────────────────────────────────────────────────────────
 
 @app.post("/submit")
-# @limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute;{config.RATE_LIMIT_PER_DAY}/day")
+@limiter.limit(f"{config.RATE_LIMIT_PER_MINUTE}/minute;{config.RATE_LIMIT_PER_DAY}/day")
 def submit():
     """
     Take a piece of text, decide about it, log the decision, answer.
