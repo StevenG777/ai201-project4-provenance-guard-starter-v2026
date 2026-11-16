@@ -385,40 +385,196 @@ The first 5 pass, the remaining 10 are rejected with 429, and each rejection is 
 
 ## Run Log and Verdicts
 
-<!-- Your five criteria across three trials. `run_eval.py --label before`. -->
+`python run_eval.py --label before` (criteria 1, 2, 3, 5) and `python run_appeal_check.py --label before` (criterion 4, because `run_eval.py` only sends `/submit`). Three trials each, nothing changed in between. Files: `results/run_2026-11-15_2123_before.md`, `results/appeal_before_2026-11-15_2122.md`. Inputs are in `scenarios.py`.
 
 | Criterion | Target | Run 1 | Run 2 | Run 3 | Verdict |
 |---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |
+| 1. My own writing flagged as AI | at most 2 of 10 labelled `ai` | 2/10 | 2/10 | 2/10 | MET (at the limit) |
+| 2. Score spread | lowest AI confidence above highest human confidence | lowest AI 0.576, highest human 0.816 | same | same | MISSED |
+| 3. All three labels reachable | each label at least 5 of 20 | human 0, unsure 14, ai 6 | same | same | MISSED |
+| 4. Appeal always changes status and is logged | 2 of 2 | 2/2 | 2/2 | 2/2 | MET |
+| 5. Empty or missing text returns 400, never a label or 500 | 3 of 3 | 3/3 | 3/3 | 3/3 | MET |
 
-**Real output from one trial**, pasted as text, naming the file and function
-that produced it:
+All three trials were identical for every criterion. That is expected: neither signal is random.
+
+**Real output from one trial** (trial 1), pasted as text.
+
+*Criterion 1.* From `run_eval.py::main`, scenario "my own writing". I removed the long `label` string from each entry to keep it readable; every other field is as returned.
 
 ```json
+[
+ {
+  "status": 200,
+  "guess": "ai",
+  "confidence": 0.8163,
+  "model_score": 0.8605,
+  "style_score": 0.75,
+  "sent": "Today is a very good day and I am happy"
+ },
+ {
+  "status": 200,
+  "guess": "unsure",
+  "confidence": 0.3953,
+  "model_score": 0.1178,
+  "style_score": 0.55,
+  "sent": "Despite work it not busy, I still feel like my energy was drained by c"
+ },
+ {
+  "status": 200,
+  "guess": "unsure",
+  "confidence": 0.4601,
+  "model_score": 0.2548,
+  "style_score": 0.6684,
+  "sent": "If gradient descent is part of math optimization, dynamic programming "
+ },
+ {
+  "status": 200,
+  "guess": "unsure",
+  "confidence": 0.5797,
+  "model_score": 0.5636,
+  "style_score": 0.6038,
+  "sent": "In this picture i see three little girls with blond hair and wear the "
+ },
+ {
+  "status": 200,
+  "guess": "unsure",
+  "confidence": 0.4325,
+  "model_score": 0.5225,
+  "style_score": 0.2975,
+  "sent": "The wood is not painted and it does not look finished.The girls appear"
+ },
+ {
+  "status": 200,
+  "guess": "unsure",
+  "confidence": 0.3646,
+  "model_score": 0.3963,
+  "style_score": 0.3171,
+  "sent": "Both girls are barefoot and their feets are very dirty. They are not s"
+ },
+ {
+  "status": 200,
+  "guess": "unsure",
+  "confidence": 0.4345,
+  "model_score": 0.1859,
+  "style_score": 0.6438,
+  "sent": "I can infer that the girls are very very poor and they are seem unhapp"
+ },
+ {
+  "status": 200,
+  "guess": "unsure",
+  "confidence": 0.5715,
+  "model_score": 0.4565,
+  "style_score": 0.9226,
+  "sent": "They maybe don\u2019t have enough to eat.They may be don\u2019t have a clothes i"
+ },
+ {
+  "status": 200,
+  "guess": "ai",
+  "confidence": 0.6687,
+  "model_score": 0.5888,
+  "style_score": 0.7886,
+  "sent": "This picture makes me feel sad.I feel sad for the three girls and thei"
+ },
+ {
+  "status": 200,
+  "guess": "unsure",
+  "confidence": 0.4901,
+  "model_score": 0.3778,
+  "style_score": 0.6585,
+  "sent": "However, i still want to talk to them,if the fact is cruel, don\u2019t give"
+ }
+]
+```
 
+*Criteria 2 and 3.* Same 20 inputs for both (10 AI, then 10 human). Each row is one entry from the JSON in `results/run_2026-11-15_2123_before.md`, trial 1, "score spread" scenario; the table is my summary of those entries.
+
+| # | set | confidence | model | style | guess |
+|---|---|---|---|---|---|
+| 1 | AI | 0.5759 | 0.7307 | 0.3437 | unsure |
+| 2 | AI | 0.6039 | 0.9095 | 0.4052 | unsure |
+| 3 | AI | 0.7369 | 0.8746 | 0.5304 | ai |
+| 4 | AI | 0.6314 | 0.7063 | 0.5191 | unsure |
+| 5 | AI | 0.612 | 0.9072 | 0.449 | unsure |
+| 6 | AI | 0.5986 | 0.6719 | 0.4886 | unsure |
+| 7 | AI | 0.7217 | 0.8622 | 0.5109 | ai |
+| 8 | AI | 0.7525 | 0.8325 | 0.6326 | ai |
+| 9 | AI | 0.6832 | 0.8046 | 0.501 | ai |
+| 10 | AI | 0.622 | 0.628 | 0.6131 | unsure |
+| 11 | human | 0.8163 | 0.8605 | 0.75 | ai |
+| 12 | human | 0.3953 | 0.1178 | 0.55 | unsure |
+| 13 | human | 0.4601 | 0.2548 | 0.6684 | unsure |
+| 14 | human | 0.5797 | 0.5636 | 0.6038 | unsure |
+| 15 | human | 0.4325 | 0.5225 | 0.2975 | unsure |
+| 16 | human | 0.3646 | 0.3963 | 0.3171 | unsure |
+| 17 | human | 0.4345 | 0.1859 | 0.6438 | unsure |
+| 18 | human | 0.5715 | 0.4565 | 0.9226 | unsure |
+| 19 | human | 0.6687 | 0.5888 | 0.7886 | ai |
+| 20 | human | 0.4901 | 0.3778 | 0.6585 | unsure |
+
+*Criterion 4.* From `run_appeal_check.py::main`, trial 1:
+
+```json
+{
+ "trial": 1,
+ "valid_appeal": {
+  "status": 200,
+  "response": {
+   "content_id": "845c9c53-86ef-4db3-9631-424936faf1a7",
+   "message": "Thanks \u2014 your appeal was recorded and a person will review it.",
+   "status": "under_review"
+  },
+  "log_events_for_content_id": [
+   null,
+   "appeal"
+  ],
+  "ok": true
+ },
+ "unknown_id": {
+  "status": 404,
+  "response": {
+   "error": "unknown_content_id",
+   "message": "We have no submission with that content_id. Check it for typos."
+  },
+  "log_entries_for_fake_id": 0,
+  "ok": true
+ }
+}
+```
+
+*Criterion 5.* From `run_eval.py::main`, scenario "bad input" (labels removed; none were returned):
+
+```json
+[
+ {
+  "status": 400,
+  "guess": null,
+  "confidence": null,
+  "model_score": null,
+  "style_score": null,
+  "sent": "{\"creator_id\": \"eval_bad_missing\"}"
+ },
+ {
+  "status": 400,
+  "guess": null,
+  "confidence": null,
+  "model_score": null,
+  "style_score": null,
+  "sent": "(empty text)"
+ },
+ {
+  "status": 400,
+  "guess": null,
+  "confidence": null,
+  "model_score": null,
+  "style_score": null,
+  "sent": "   \n\t  \n "
+ }
+]
 ```
 
 **Diagnoses**
 
-<!-- For each miss AND each broken attack: the stage and the mechanism.
-
-     Your service has five stages: the route, signal one, signal two, the
-     combining rule, and the label mapping.
-
-     Not a diagnosis:  "The evasion attacks got through."
-     A diagnosis:      "Four evasion inputs got through. All four had typos
-                        added to AI-generated text. My second signal measures
-                        word variety, and typos raise word variety — so it read
-                        them as more human. My combining rule weights that
-                        signal at 0.6, so it dragged the whole score down."
-
-     Look for a pattern. Five failures on one signal is one problem, not five. -->
-
-
+<!-- Milestone 4: for each miss, the stage and the mechanism. -->
 
 ---
 
