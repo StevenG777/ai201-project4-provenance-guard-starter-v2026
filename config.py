@@ -58,8 +58,8 @@ MAX_TEXT_CHARS = 10_000
 # down BEFORE you code it, and to put the numbers in your README. Whatever you
 # decide, it goes here.
 
-WEIGHT_MODEL_SIGNAL = 0.6   # perplexity reads actual predictability
-WEIGHT_STYLE_SIGNAL = 0.4   # shape-only, and trivially edited
+WEIGHT_MODEL_SIGNAL = 0.7   # was 0.6; Milestone 5 improvement (style weight 0.4 -> 0.3)
+WEIGHT_STYLE_SIGNAL = 0.3   # was 0.4; shape-only, and trivially edited
 
 # If the signals differ by more than this, they are disagreeing, and the
 # disagreement is itself uncertainty: pull the score toward 0.5.

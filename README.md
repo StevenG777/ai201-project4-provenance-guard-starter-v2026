@@ -617,22 +617,115 @@ No criterion was revised: all five were measurable as written.
 
 ## The Improvement
 
-**What I changed:**
+**What I changed:** one number in `config.py`: the style signal's weight in the combining rule, from 0.4 to 0.3 (and the model signal's from 0.6 to 0.7). Nothing else moved: thresholds, the disagreement pull, the both-signals guard, labels and the route are unchanged. I restarted the service so it loaded the new value, then re-ran `python run_attacks.py --set attack_set --label after`, `python run_eval.py --label after` and `python run_appeal_check.py --label after`.
 
-**Which diagnosis pointed at it:**
+**Which diagnosis pointed at it:** the Milestone 4 diagnosis that both criterion misses trace to signal two: it scored the human set higher than the AI set (0.62 against 0.50) and held human pieces' combined scores up. Before choosing 0.3 I re-scored my stored results offline with the real `scoring.py` at weights of 0.4, 0.3, 0.2, 0.1 and 0: 0.3 gave nearly all the gain a weight change could, and going lower added almost nothing. I also knew then that a weight change alone would not fix most of the failures, because the false positives and two of my human pieces score high on the model signal by itself.
 
 ### Attack Run — After
 
-<!-- Same format. `run_attacks.py --label after` -->
+Same 56 attacks, same marking rules as Attack Run — Before. Full output: `results/attack_run_2026-11-15_2239_after.md`.
 
+| Family | Held before | Broke before | Held after | Broke after |
+|---|---|---|---|---|
+| evasion | 1 | 9 | 1 | 9 |
+| false_positive | 4 | 4 | 4 | 4 |
+| prompt_injection | 5 | 1 | 5 | 1 |
+| malformed | 17 | 3 | 17 | 3 |
+| flood_same_creator | 12 | 0 | 12 | 0 |
+| **Total** | **39** | **17** | **39** | **17** |
 
+| ID | Status | Guess (before → after) | Score (before → after) | Mark (before → after) |
+|---|---|---|---|---|
+| EV01 | 200 | unsure → unsure | 0.412 → 0.392 | BROKE → BROKE |
+| EV02 | 200 | unsure → unsure | 0.441 → 0.479 | BROKE → BROKE |
+| EV03 | 200 | unsure → unsure | 0.521 → 0.557 | BROKE → BROKE |
+| EV04 | 200 | unsure → unsure | 0.579 → 0.587 | BROKE → BROKE |
+| EV05 | 200 | human → human | 0.262 → 0.277 | BROKE → BROKE |
+| EV06 | 200 | unsure → unsure | 0.464 → 0.491 | BROKE → BROKE |
+| EV07 | 200 | unsure → unsure | 0.577 → 0.580 | BROKE → BROKE |
+| EV08 | 200 | unsure → human **(changed label)** | 0.366 → 0.336 | BROKE → BROKE |
+| EV09 | 200 | unsure → unsure | 0.556 → 0.593 | BROKE → BROKE |
+| EV10 | 200 | ai → ai | 0.875 → 0.901 | HELD → HELD |
+| FP01 | 200 | unsure → unsure | 0.587 → 0.595 | HELD → HELD |
+| FP02 | 200 | ai → ai | 0.721 → 0.726 | BROKE → BROKE |
+| FP03 | 200 | ai → ai | 0.732 → 0.750 | BROKE → BROKE |
+| FP04 | 200 | ai → ai | 0.709 → 0.740 | BROKE → BROKE |
+| FP05 | 200 | ai → ai | 0.781 → 0.786 | BROKE → BROKE |
+| FP06 | 200 | unsure → unsure | 0.610 → 0.630 | HELD → HELD |
+| FP07 | 200 | unsure → unsure | 0.608 → 0.628 | HELD → HELD |
+| FP08 | 200 | unsure → unsure | 0.370 → 0.358 | HELD → HELD |
+| PI01 | 200 | unsure → unsure | 0.388 → 0.407 | HELD → HELD |
+| PI02 | 200 | human → human | 0.212 → 0.210 | BROKE → BROKE |
+| PI03 | 200 | unsure → unsure | 0.524 → 0.542 | HELD → HELD |
+| PI04 | 200 | unsure → unsure | 0.428 → 0.446 | HELD → HELD |
+| PI05 | 200 | unsure → unsure | 0.475 → 0.498 | HELD → HELD |
+| PI06 | 200 | unsure → unsure | 0.555 → 0.556 | HELD → HELD |
+| MF01 | 400 | — → — | — → — | HELD → HELD |
+| MF02 | 400 | — → — | — → — | HELD → HELD |
+| MF03 | 200 | unsure → unsure | 0.400 → 0.362 | HELD → HELD |
+| MF04 | 200 | unsure → unsure | 0.453 → 0.404 | HELD → HELD |
+| MF05 | 200 | ai → ai | 0.899 → 0.923 | BROKE → BROKE |
+| MF06 | 200 | ai → ai | 0.998 → 0.998 | BROKE → BROKE |
+| MF07 | 200 | ai → ai | 0.944 → 0.934 | BROKE → BROKE |
+| MF08 | 413 | — → — | — → — | HELD → HELD |
+| RQ01 | 400 | — → — | — → — | HELD → HELD |
+| RQ02 | 400 | — → — | — → — | HELD → HELD |
+| RQ03 | 400 | — → — | — → — | HELD → HELD |
+| RQ04 | 400 | — → — | — → — | HELD → HELD |
+| RQ05 | 400 | — → — | — → — | HELD → HELD |
+| RQ06 | 400 | — → — | — → — | HELD → HELD |
+| RQ07 | 400 | — → — | — → — | HELD → HELD |
+| RQ08 | 400 | — → — | — → — | HELD → HELD |
+| RQ09 | 400 | — → — | — → — | HELD → HELD |
+| RQ10 | 429 | — → — | — → — | HELD → HELD |
+| RQ11 | 429 | — → — | — → — | HELD → HELD |
+| RQ12 | 400 | — → — | — → — | HELD → HELD |
+| FL01_01 | 200 | unsure → unsure | 0.409 → 0.372 | HELD → HELD |
+| FL01_02 | 200 | unsure → unsure | 0.409 → 0.372 | HELD → HELD |
+| FL01_03 | 200 | unsure → unsure | 0.409 → 0.372 | HELD → HELD |
+| FL01_04 | 200 | unsure → unsure | 0.409 → 0.372 | HELD → HELD |
+| FL01_05 | 200 | unsure → unsure | 0.409 → 0.372 | HELD → HELD |
+| FL01_06 | 429 | — → — | — → — | HELD → HELD |
+| FL01_07 | 429 | — → — | — → — | HELD → HELD |
+| FL01_08 | 429 | — → — | — → — | HELD → HELD |
+| FL01_09 | 429 | — → — | — → — | HELD → HELD |
+| FL01_10 | 429 | — → — | — → — | HELD → HELD |
+| FL01_11 | 429 | — → — | — → — | HELD → HELD |
+| FL01_12 | 429 | — → — | — → — | HELD → HELD |
 
-**Did it help, and how do I know:**
+**Ten audit log entries from the after run** (from `logs/audit.jsonl`; the last two are rejected requests):
 
-<!-- Widening the unsure band usually fixes one problem and creates another.
-     Reporting that trade honestly is worth full credit. -->
+```json
+{"timestamp": "2026-11-16T06:39:30+00:00", "content_id": "078fcc70-ef9d-4fb1-a1ec-1f7c13b88f52", "creator_id": "attacker_EV08", "guess": "human", "model_score": 0.2452, "style_score": 0.548, "combined_score": 0.336, "label": "We think this was probably written by a person.", "status": "decided"}
+{"timestamp": "2026-11-16T06:39:29+00:00", "content_id": "9e10955a-a5d1-4d6f-be9e-10202b7bce44", "creator_id": "attacker_EV01", "guess": "unsure", "model_score": 0.1635, "style_score": 0.5675, "combined_score": 0.3923, "label": "We can't tell whether this was written by a person or with AI, so we haven't made a call. Nothing is wrong with your work. If you'd like someone to look at it, you can appeal.", "status": "decided"}
+{"timestamp": "2026-11-16T06:39:30+00:00", "content_id": "5d1756a9-c84b-4613-9f09-5a6722145e28", "creator_id": "attacker_EV10", "guess": "ai", "model_score": 0.9792, "style_score": 0.7186, "combined_score": 0.901, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+{"timestamp": "2026-11-16T06:39:30+00:00", "content_id": "a4a3dcd8-0639-448a-b7b1-819f0d15129e", "creator_id": "attacker_FP05", "guess": "ai", "model_score": 0.8005, "style_score": 0.751, "combined_score": 0.7856, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+{"timestamp": "2026-11-16T06:39:30+00:00", "content_id": "ac4ccb4d-3271-498b-a0aa-314da9d8ef37", "creator_id": "attacker_FP03", "guess": "ai", "model_score": 0.8051, "style_score": 0.6215, "combined_score": 0.75, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+{"timestamp": "2026-11-16T06:39:30+00:00", "content_id": "1ccc9713-b455-4efb-98a3-91ea2be2e12b", "creator_id": "attacker_FP06", "guess": "unsure", "model_score": 0.8814, "style_score": 0.4755, "combined_score": 0.6298, "label": "We can't tell whether this was written by a person or with AI, so we haven't made a call. Nothing is wrong with your work. If you'd like someone to look at it, you can appeal.", "status": "decided"}
+{"timestamp": "2026-11-16T06:39:31+00:00", "content_id": "3a70b257-c384-4c79-ae0a-642393a9a01c", "creator_id": "attacker_PI02", "guess": "human", "model_score": 0.2044, "style_score": 0.2233, "combined_score": 0.2101, "label": "We think this was probably written by a person.", "status": "decided"}
+{"timestamp": "2026-11-16T06:39:31+00:00", "content_id": "207c60c1-f84b-4258-b8d2-9fdb7844d0c6", "creator_id": "attacker_MF06", "guess": "ai", "model_score": 0.9969, "style_score": 1.0, "combined_score": 0.9978, "label": "Our tools think this was probably written with the help of AI. They can be wrong, especially with plain, simple writing. If you wrote it yourself, you can appeal and a person will take a look.", "status": "decided"}
+{"timestamp": "2026-11-16T06:39:31+00:00", "creator_id": "attacker_MF01", "event": "rejected", "status": "rejected", "reason": "missing_text"}
+{"timestamp": "2026-11-16T06:39:32+00:00", "creator_id": "attacker_flood", "event": "rejected", "status": "rejected", "reason": "rate_limited", "limit": "5 per 1 minute"}
+```
 
+**The five criteria, before and after** (three trials each; all three trials were identical both times):
 
+| Criterion | Target | Before | After | Verdict before → after |
+|---|---|---|---|---|
+| 1. My own writing flagged as AI | at most 2 of 10 | 2/10 | 1/10 | MET (no margin) → MET |
+| 2. Score spread | lowest AI above highest human | lowest AI 0.576, highest human 0.816 | lowest AI 0.615, highest human 0.827 | MISSED → MISSED |
+| 3. All three labels reachable | each at least 5 of 20 | human 0, unsure 14, ai 6 | human 0, unsure 14, ai 6 | MISSED → MISSED |
+| 4. Appeal path | 2 of 2 | 2/2 | 2/2 | MET → MET |
+| 5. Bad input | 3 of 3 return 400 | 3/3 | 3/3 | MET → MET |
+
+Files: `results/run_2026-11-15_2123_before.md` and `results/run_2026-11-15_2237_after.md` (criteria 1, 2, 3, 5), `results/appeal_before_2026-11-15_2122.md` and `results/appeal_after_2026-11-15_2237.md` (criterion 4).
+
+**Did it help, and how do I know:** barely. In one sentence: the change fixed one criterion-1 piece and made the AI side score slightly higher, but it did not fix either criterion miss or any broken attack.
+- *What improved:* criterion 1 went from 2 of 10 to 1 of 10 (the essay chunk "However, i still want to talk to them..." fell from `ai` at 0.669 to `unsure` at 0.649), so it now passes with room to spare. Two more AI pieces are labelled `ai` (AI piece 4 moved from `unsure` to `ai`; AI-set labels went from 4 to 5 `ai`). The lowest AI score rose from 0.576 to 0.615.
+- *What did not improve:* criterion 2 is still missed, because the highest human piece is still your sentence "Today is a very good day and I am happy" (0.827), which the model signal alone scores 0.86. Criterion 3 is still missed: still no "human" label. The attack counts are identical, 39 held and 17 broke, with the same four false positives (FP02 to FP05) and the same nine evasions.
+- *What got worse:* EV08 (a very short AI text) moved from `unsure` (0.366) to `human` (0.336). It was already marked BROKE, so the count does not change, but the label is now a wrong clean bill of health instead of "unsure". Lowering signal two's weight made signal one's weight larger, and signal one is the one that reads short text as human.
+- *The trade I made:* weighting signal two less means fewer wrong accusations from the style signal and a bit more reliance on the model signal. The price is that signal-one evasions (EV01, EV04, EV08) matter more. On this data the price was one label (EV08) and the gain was one fewer flagged human piece.
+- *Why it was small:* the weight only changes how much style counts in the average. The false positives and human pieces 1 and 9 score high on the model signal by themselves, and the disagreement pull and the both-signals guard still act on the gap between the signals regardless of weight. A weight change cannot touch those.
 
 ---
 
