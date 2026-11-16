@@ -240,6 +240,19 @@ The original decision and the appeal sit side by side for the same `content_id`.
 - *What came back:* three scaled measures (sentence-length spread, type-token ratio, punctuation density), a 0.6/0.4 weighted average, a rule that pulls the score toward 0.5 when the signals disagree, and a rule that blocks the AI label unless both signals lean AI. The calibration table showed that both rules fail on exactly my false-positive case: a plain human paragraph scored 0.80 because both signals read short even sentences as AI. It also showed the clearly-AI paragraph only reaching "unsure" (0.58).
 - *What I changed:* nothing in the numbers yet. I kept the weights and thresholds, and wrote the plain-human false positive and the weak style score into the README as unresolved findings, because tuning the cutoffs to those four inputs would only fit the sample.
 
+**Unit 8, moment 3: designing my five-criteria tests and the appeal check**
+
+- *What I asked for:* help turning my five criteria into scenarios that `run_eval.py` could run three times, including criterion 4 (the appeal path), which `run_eval.py` cannot send.
+- *What came back:* `scenarios.py` for criteria 1, 2, 3 and 5, ten AI-style paragraphs written by Claude for the AI side, and a new `run_appeal_check.py` for criterion 4.
+- *What I changed:* I supplied my own writing for the human side, so criterion 1 tests real writing. I also challenged a claim Claude made about the essay's author being a non-native English speaker; it was an inference from the text, not something I had said, and it was removed from `scenarios.py`.
+
+**Unit 8, moment 4: choosing and sizing the improvement**
+
+- *What I asked for:* how much to lower signal two's weight, after I diagnosed it as the main cause of two misses.
+- *What came back:* an offline re-score of my stored results at several weights and at other single changes (threshold, disagreement pull, guard). It showed a weight change alone would barely help, which contradicted Claude's earlier suggestion that it was the best match.
+- *What I changed:* I kept my choice of the weight change at 0.3 (the smallest change that captured the gain), and I reported that it barely helped and that EV08 got worse, instead of switching to a change that looked better.
+
+
 <!-- ═══════════════════════ UNIT 8 — THE TEST ═══════════════════════ -->
 
 ---
@@ -731,17 +744,23 @@ Files: `results/run_2026-11-15_2123_before.md` and `results/run_2026-11-15_2237_
 
 ## What's Still Broken
 
-<!-- For each attack still getting through and each criterion still missed:
-     what you'd do, and why you stopped. -->
+I stopped because this unit allows exactly one change, so none of the items below were tried for real. The "would do" notes marked *simulated* come from re-scoring my stored results offline with the real `scoring.py`; the rest are untested.
 
+**Criteria still missed**
+- **Criterion 2 (score spread).** Still missed: the lowest AI piece scores 0.615 and the highest human piece scores 0.827 (my sentence "Today is a very good day and I am happy"). The model signal alone scores that sentence 0.86, so no weight on signal two can fix it. *Would do:* work on signal one, for example treating very short or very plain text as low-evidence instead of reading its predictability as AI. *Why I stopped:* that is a different change from the one I measured, and I have only one human piece that shows it.
+- **Criterion 3 (label coverage).** Still missed: the "human" label never appears. *Would do:* raise `HUMAN_THRESHOLD` (simulated: 0.45 gives 4 "human" labels in my 20 inputs, still short of the 5 I targeted) and reduce the disagreement pull. *Why I stopped:* a higher human threshold moves some AI attacks (EV01, EV02, EV08, with scores 0.37 to 0.44) from "unsure" to "human", so it needs a decision about how much missed AI I accept.
 
+**Attacks still getting through (17 broke, the same 17 as before)**
+- **FP02 to FP05, plain, formal or careful human writing accused of AI (4).** *Would do:* raise `AI_THRESHOLD` from 0.65 to 0.75 (simulated: false positives accused drops from 4 of 8 to 1 of 8, but AI pieces caught drops from 4 of 10 to 2 of 10). *Why I stopped:* it is a policy trade, and my human sample is one author and mostly one essay, too small to set a production threshold from.
+- **EV01 to EV09, evasions (9).** One dropped signal is enough, because the rule averages the signals, pulls toward 0.5 on disagreement and blocks "ai" unless both are at least 0.5. *Would do:* revisit the combining rule so one strong signal can count more. *Why I stopped:* that raises false positives, which is the direction I am trying to avoid, and a rule fix cannot beat edits that change what the signals read.
+- **PI02, an injection that got "human" (1).** My explanation (unusual text at the start raises perplexity) was never tested against a clean baseline. *Would do:* submit the unmodified AI paragraph and a prefix-only variant to confirm the cause before changing anything.
+- **MF05 to MF07, repeated letters, emoji and Arabic labelled AI (3), and MF03 and MF04, scored instead of rejected.** *Would do first:* make the route reject text with too few real words (signal two returns 1.0 when it finds none, and the model reads repeated tokens as predictable). It is the cheapest and least risky fix and would not touch the other failures. *Why I stopped:* it was not the change my diagnosis pointed at most strongly, and one change was the limit.
+
+**Limits of my own tests.** The human pieces for criteria 1 to 3 are one author, hand-picked, and 7 of 10 are chunks of one essay, so they show failure cases, not rates. The AI pieces were written by Claude in one style. Criterion 1 passes at 1 of 10, but that says only that this set passes.
 
 **The trade I'd make if this ran for real:**
 
-<!-- Two sentences. Fewer wrong accusations means more AI text getting through.
-     Say which way you'd go and WHO PAYS FOR IT. -->
-
-
+I would accuse fewer people even though more AI text gets through, so I would raise the AI threshold, because a wrongly accused writer bears the whole cost of the mistake while a missed AI text costs the site only a little. The people who pay are the site and its other writers, whose real work competes with AI text that no longer gets flagged.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 
